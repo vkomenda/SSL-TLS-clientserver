@@ -11,6 +11,27 @@
 
 #include "client_server.h"
 
+static void showCerts(SSL* ssl)
+{
+  X509* cert;
+  char* line;
+
+  printf("Encryption %s\n", SSL_get_cipher(ssl));
+  cert = SSL_get_peer_certificate(ssl);
+  if (cert != NULL) {
+    printf("Server certificates:\n");
+    line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
+    printf("Subject: %s\n", line);
+    free(line);
+    line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
+    printf("Issuer: %s\n", line);
+    free(line);
+    sk_X509_free(cert);
+  }
+  else
+    printf("No certificates.\n");
+}
+
 static int clientContextInit(SSL_CTX** ssl_ctx /* output */)
 {
   int ret = 0;
@@ -18,7 +39,7 @@ static int clientContextInit(SSL_CTX** ssl_ctx /* output */)
 
   /* define TLS method */
 
-  ctx = SSL_CTX_new(TLSv1_client_method());
+  ctx = SSL_CTX_new(TLSv1_2_client_method());
 
   /* load certificate */
 
@@ -48,7 +69,7 @@ static int clientContextInit(SSL_CTX** ssl_ctx /* output */)
   }
 
   if (!ret &&
-      !SSL_CTX_load_verify_locations(ctx, TLS_CA_CERT, NULL))
+      SSL_CTX_load_verify_locations(ctx, TLS_CA_CERT, TLS_CA_PATH) != 1)
   {
     ret = -EPERM;
   }
@@ -162,9 +183,12 @@ static int clientSslUp(SSL_CTX* ssl_ctx /* input */,
     if (connect_status != 1)
     {
       printf("Handshake Error %d\n", SSL_get_error(s, connect_status));
+      ERR_print_errors_fp(stderr);
       SSL_free(s);
       ret = -ENOTCONN;
     }
+    else
+      showCerts(*ssl);
   }
 
   return ret;
