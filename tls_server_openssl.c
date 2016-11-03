@@ -9,7 +9,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#include "client_server.h"
+#include "config.h"
 
 static void showCerts(SSL* ssl)
 {
@@ -19,7 +19,7 @@ static void showCerts(SSL* ssl)
   printf("Encryption %s\n", SSL_get_cipher(ssl));
   cert = SSL_get_peer_certificate(ssl);
   if (cert != NULL) {
-    printf("Server certificates:\n");
+    printf("Peer certificates:\n");
     line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
     printf("Subject: %s\n", line);
     free(line);
@@ -40,6 +40,16 @@ static int serverContextInit(SSL_CTX** ssl_ctx /* output */)
   /* define TLS method */
 
   ctx = SSL_CTX_new(TLSv1_2_server_method());
+
+  if (ctx == NULL) {
+    ret = -EPERM;
+  }
+
+  if (!ret &&
+      SSL_CTX_set_ecdh_auto(ctx, 1) != 1)
+  {
+    ret = -EFAULT;
+  }
 
   /* load certificate */
 
@@ -69,7 +79,7 @@ static int serverContextInit(SSL_CTX** ssl_ctx /* output */)
   }
 
   if (!ret &&
-      SSL_CTX_load_verify_locations(ctx, TLS_CA_CERT, TLS_CA_PATH) != 1)
+      SSL_CTX_load_verify_locations(ctx, TLS_CA_CERT, NULL) != 1)
   {
     ret = -EPERM;
   }
