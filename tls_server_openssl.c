@@ -292,9 +292,9 @@ static void serverTest(SSL* ssl)
   if (bytes_read > 0)
   {
     len = strlen(" and Server");
-    strncpy(&buffer[bytes_read], " and Server", len);
-    buffer[bytes_read + len] = '\0';
-    SSL_write(ssl, buffer, bytes_read + len + 1);
+    strncpy(&buffer[bytes_read - 1], " and Server", len);
+    buffer[bytes_read - 1 + len] = '\0';
+    SSL_write(ssl, buffer, bytes_read + len);
   }
   else
   {
